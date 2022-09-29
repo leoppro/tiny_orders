@@ -1,6 +1,6 @@
 use crate::{
     entity::{commodity, consumer, evaluation, inventory, order},
-    rand::rand_u32,
+    rand::rand_i64,
 };
 use anyhow::Result;
 use chrono::Local;
@@ -48,7 +48,7 @@ const TOKEN_NUMBER_PRE_SECOND: u32 = 50;
 
 pub async fn execute<T: Into<Config>>(db: &DatabaseConnection, config: T) -> Result<()> {
     let config = config.into();
-    let (token_tx, token_rx) = flume::bounded(TOKEN_NUMBER_PRE_SECOND as usize);
+    let (token_tx, token_rx) = flume::bounded(10);
     let (martix_tx, martix_rx) = flume::unbounded();
     let token_generator_handle = token_generator(token_tx, config.rate_limit);
     let evaluation_service_handle =
@@ -109,12 +109,18 @@ async fn orders_service(
 ) -> Result<()> {
     run_service(db, token_rx, martix_tx, config.concurrent, move |txn| {
         Box::pin(async move {
-            let consumer_id = rand_u32(1, config.consumer_count);
-            let commodity_id = rand_u32(1, config.commodity_count);
-            let commodity = commodity::Entity::find_by_id(commodity_id)
-                .one(txn)
-                .await?
-                .expect("Can't find the commodity");
+            let consumer_id = rand_i64(1, config.consumer_count as i64);
+            let commodity_id = rand_i64(1, config.commodity_count as i64);
+            let commodity = match commodity::Entity::find_by_id(commodity_id).one(txn).await? {
+                Some(e) => e,
+                None => {
+                    println!(
+                        "[WARN] Can't find the commodity({}), retrying.",
+                        commodity_id
+                    );
+                    return Ok(0);
+                }
+            };
             let inventory = inventory::Entity::find_by_id(commodity_id)
                 .one(txn)
                 .await?
@@ -127,7 +133,7 @@ async fn orders_service(
                 .await?
                 .expect("Can't find the consumer");
             let inventory_number = inventory.inventory;
-            let mut sold_number = rand_u32(1, 5);
+            let mut sold_number = rand_i64(1, 5);
             if inventory_number < sold_number {
                 sold_number = inventory_number;
             }
@@ -157,8 +163,8 @@ async fn evaluation_service(
 ) -> Result<()> {
     run_service(db, token_rx, martix_tx, config.concurrent, move |txn| {
         Box::pin(async move {
-            let consumer_id = rand_u32(1, config.consumer_count);
-            let commodity_id = rand_u32(1, config.commodity_count);
+            let consumer_id = rand_i64(1, config.consumer_count as i64);
+            let commodity_id = rand_i64(1, config.commodity_count as i64);
             commodity::Entity::find_by_id(commodity_id)
                 .one(txn)
                 .await?
@@ -185,13 +191,13 @@ async fn change_price_service(
 ) -> Result<()> {
     run_service(db, token_rx, martix_tx, config.concurrent, move |txn| {
         Box::pin(async move {
-            let commodity_id = rand_u32(1, config.commodity_count);
+            let commodity_id = rand_i64(1, config.commodity_count as i64);
             let mut commodity: commodity::ActiveModel = commodity::Entity::find_by_id(commodity_id)
                 .one(txn)
                 .await?
                 .expect("Can't find the commodity")
                 .into();
-            commodity.price = Set(rand_u32(1, 1000));
+            commodity.price = Set(rand_i64(1, 1000));
             commodity.updated_at = Set(Local::now().naive_local());
             commodity.update(txn).await?;
             Ok(1)

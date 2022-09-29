@@ -4,8 +4,8 @@ use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
 #[sea_orm(table_name = "tiny_orders_inventory")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub commodity_id: u32,
-    pub inventory: u32,
+    pub commodity_id: i64,
+    pub inventory: i64,
     pub updated_at: DateTime,
     pub created_at: DateTime,
 }

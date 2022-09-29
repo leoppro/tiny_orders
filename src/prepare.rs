@@ -3,6 +3,7 @@ use anyhow::{Context, Result};
 use futures::future::join_all;
 use sea_orm::ActiveModelTrait;
 use sea_orm::{DatabaseConnection, DatabaseTransaction, DbErr, Set, TransactionTrait};
+use std::time::{Duration, Instant};
 use std::{future::Future, pin::Pin};
 
 pub struct Config {
@@ -35,20 +36,23 @@ pub async fn execute<T: Into<Config>>(db: &DatabaseConnection, config: T) -> Res
     let config = config.into();
     // create table
     schema_setup(db).await.context("Failed to setup schema")?;
+    println!("Finished setup schema.");
     // insert rows
     insert_commodity(db, &config)
         .await
         .context("Failed to insert commodity")?;
+    println!("Finished insert commodity.");
     insert_consumer(db, &config)
         .await
         .context("Failed to insert consumer")?;
+    println!("Finished insert commodity.");
     Ok(())
 }
 
 async fn insert_commodity(db: &DatabaseConnection, config: &Config) -> Result<()> {
     batch_exec(
         db,
-        config.commodity_count,
+        config.commodity_count * 2,
         config.txn_size,
         config.concurrent,
         |txn| {
@@ -60,7 +64,7 @@ async fn insert_commodity(db: &DatabaseConnection, config: &Config) -> Result<()
                 inventory_active.updated_at = Set(commodity_inserted.created_at.clone());
                 inventory_active.created_at = Set(commodity_inserted.created_at.clone());
                 inventory_active.insert(txn).await?;
-                Ok(())
+                Ok(2)
             })
         },
     )
@@ -77,7 +81,7 @@ async fn insert_consumer(db: &DatabaseConnection, config: &Config) -> Result<()>
         |txn| {
             Box::pin(async move {
                 consumer::ActiveModel::rand_fake_new().insert(txn).await?;
-                Ok(())
+                Ok(1)
             })
         },
     )
@@ -96,7 +100,7 @@ where
     F: for<'c> Fn(
             &'c DatabaseTransaction,
         )
-            -> Pin<Box<dyn Future<Output = std::result::Result<(), DbErr>> + Send + 'c>>
+            -> Pin<Box<dyn Future<Output = std::result::Result<u32, DbErr>> + Send + 'c>>
         + Send
         + Sync
         + Copy
@@ -110,6 +114,8 @@ where
             if i == concurrent - 1 {
                 unit_count += count - (unit_count * concurrent);
             }
+            let mut rows = 0;
+            let mut now = Instant::now();
             while unit_count > 0 {
                 let mut txn_size = txn_size_limit;
                 if unit_count < txn_size {
@@ -117,18 +123,28 @@ where
                 }
                 unit_count -= txn_size;
                 let result = db
-                    .transaction::<_, (), DbErr>(|txn| {
+                    .transaction::<_, u32, DbErr>(|txn| {
                         Box::pin(async move {
-                            for _ in 0..txn_size {
-                                callback(txn).await?;
+                            let mut rows = 0;
+                            while rows < txn_size {
+                                rows += callback(txn).await?;
                             }
-                            Ok(())
+                            Ok(rows)
                         })
                     })
                     .await;
-                if result.is_err() {
-                    return result;
+                match result {
+                    Ok(txn_rows) => rows += txn_rows,
+                    Err(err) => return Err(err),
                 }
+                if now.elapsed() > Duration::from_secs(1) {
+                    now = Instant::now();
+                    println!("[thread {}] Insert rows:{}", i, rows);
+                    rows = 0;
+                }
+            }
+            if rows > 0 {
+                println!("[thread {}] Insert rows:{}", i, rows);
             }
             Ok(())
         });

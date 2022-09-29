@@ -5,11 +5,11 @@ use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
 #[sea_orm(table_name = "tiny_orders_order")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
-    pub id: u32,
-    pub consumer_id: u32,
-    pub commodity_id: u32,
-    pub sold_uint_price: u32,
-    pub sold_number: u32,
+    pub id: i64,
+    pub consumer_id: i64,
+    pub commodity_id: i64,
+    pub sold_uint_price: i64,
+    pub sold_number: i64,
     pub created_at: DateTime,
 }
 
