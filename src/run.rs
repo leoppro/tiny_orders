@@ -10,8 +10,8 @@ use sea_orm::{
     ActiveModelTrait, DatabaseConnection, DatabaseTransaction, DbErr, EntityTrait, Set,
     TransactionTrait,
 };
+use std::time::Instant;
 use std::{pin::Pin, time::Duration};
-use std::{result, time::Instant};
 use tokio::time::sleep;
 
 #[derive(Debug, Clone, Copy)]
@@ -56,6 +56,7 @@ pub async fn execute<T: Into<Config>>(db: &DatabaseConnection, config: T) -> Res
     let martix_service_handle = martix_service(martix_rx);
     if config.downgrade {
         println!("Running with downgrade mode");
+        std::mem::drop(martix_tx);
         tokio::join!(
             token_generator_handle,
             evaluation_service_handle,
@@ -94,7 +95,7 @@ async fn token_generator(token_tx: Sender<u32>, rate_limit: u32) {
                 println!("receive the exit signal, exit...");
                 return;
             }
-            token_tx.send_timeout(rate_unit, Duration::from_millis(200));
+            token_tx.send_timeout(rate_unit, Duration::from_millis(50));
             sleep(Duration::from_millis(1000 / TOKEN_NUMBER_PRE_SECOND as u64)).await;
         }
     });
@@ -218,7 +219,7 @@ where
         + 'static,
 {
     let mut join_handle_vec = Vec::new();
-    for _ in 0..concurrent {
+    for i in 0..concurrent {
         let db = db.clone();
         let token_rx = token_rx.clone();
         let martix_tx = martix_tx.clone();

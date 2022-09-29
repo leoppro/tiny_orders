@@ -1,8 +1,7 @@
-use anyhow::Result;
 use chrono::Local;
 use fakeit::hipster;
 use rand::{thread_rng, Rng};
-use sea_orm::{entity::prelude::*, ActiveValue::NotSet, ConnectionTrait, Schema, Set};
+use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "tiny_orders_commodity")]
@@ -28,7 +27,7 @@ impl ActiveModel {
         Self {
             id: NotSet,
             title: Set(hipster::sentence(5)),
-            price: Set(rng.gen_range(1..1000)),
+            price: Set(rng.gen_range(1..100)),
             description: Set(hipster::sentence(30)),
             updated_at: Set(create_at.clone()),
             created_at: Set(create_at),

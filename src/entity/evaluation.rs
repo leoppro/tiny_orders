@@ -1,13 +1,13 @@
 use chrono::Local;
 use fakeit::hipster;
-use sea_orm::{entity::prelude::*, Set};
+use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "tiny_orders_evaluation")]
 pub struct Model {
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = true)]
+    pub id: u32,
     pub consumer_id: u32,
-    #[sea_orm(primary_key)]
     pub commodity_id: u32,
     pub evaluation: String,
     pub updated_at: DateTime,
@@ -28,6 +28,7 @@ impl ActiveModel {
             evaluation: Set(hipster::sentence(30)),
             updated_at: Set(create_at.clone()),
             created_at: Set(create_at),
+            id: NotSet,
         }
     }
 }

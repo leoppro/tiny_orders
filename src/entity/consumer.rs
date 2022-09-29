@@ -1,6 +1,5 @@
 use chrono::Local;
 use fakeit::name;
-use rand::thread_rng;
 use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]

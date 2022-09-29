@@ -1,5 +1,3 @@
-use chrono::Local;
-use rand::{thread_rng, Rng};
 use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -19,7 +17,6 @@ impl ActiveModelBehavior for ActiveModel {}
 
 impl ActiveModel {
     pub fn rand_fake_new() -> Self {
-        let create_at = Local::now().naive_local();
         Self {
             commodity_id: NotSet,
             inventory: Set(100000),
