@@ -8,8 +8,10 @@ use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: i64,
+    #[sea_orm(column_length = "256")]
     pub title: String,
     pub price: i64,
+    #[sea_orm(column_length = "1024")]
     pub description: String,
     pub updated_at: DateTime,
     pub created_at: DateTime,

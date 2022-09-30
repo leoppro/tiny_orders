@@ -9,6 +9,7 @@ pub struct Model {
     pub id: i64,
     pub consumer_id: i64,
     pub commodity_id: i64,
+    #[sea_orm(column_length = "1024")]
     pub evaluation: String,
     pub updated_at: DateTime,
     pub created_at: DateTime,
