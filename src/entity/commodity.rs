@@ -8,10 +8,8 @@ use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: i64,
-    #[sea_orm(column_length = "256")]
     pub title: String,
     pub price: i64,
-    #[sea_orm(column_length = "2048")]
     pub description: String,
     pub updated_at: DateTime,
     pub created_at: DateTime,
@@ -28,9 +26,9 @@ impl ActiveModel {
         let create_at = Local::now().naive_local();
         Self {
             id: NotSet,
-            title: Set(hipster::sentence(5)),
+            title: Set(hipster::sentence(2)),
             price: Set(rng.gen_range(1..100)),
-            description: Set(hipster::sentence(30)),
+            description: Set(hipster::sentence(10)),
             updated_at: Set(create_at.clone()),
             created_at: Set(create_at),
         }

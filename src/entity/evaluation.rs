@@ -9,7 +9,6 @@ pub struct Model {
     pub id: i64,
     pub consumer_id: i64,
     pub commodity_id: i64,
-    #[sea_orm(column_length = "2048")]
     pub evaluation: String,
     pub updated_at: DateTime,
     pub created_at: DateTime,
@@ -26,7 +25,7 @@ impl ActiveModel {
         Self {
             consumer_id: Set(consumer_id),
             commodity_id: Set(commodity_id),
-            evaluation: Set(hipster::sentence(30)),
+            evaluation: Set(hipster::sentence(10)),
             updated_at: Set(create_at.clone()),
             created_at: Set(create_at),
             id: NotSet,
